@@ -1,0 +1,14 @@
+# secrets: commit .env.example, never .env
+.env
+# raw source data (provided by the course; uploaded to ADLS, not versioned)
+data/
+# dbt (.user.yml is written next to profiles.yml)
+target/
+dbt_packages/
+logs/
+.user.yml
+# Python and editors
+__pycache__/
+.venv/
+.vscode/
+.DS_Store
