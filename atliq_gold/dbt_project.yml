@@ -1,0 +1,18 @@
+name: atliq_gold
+version: "1.0.0"
+config-version: 2
+profile: atliq_gold
+
+model-paths: ["models"]
+test-paths: ["tests"]
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  atliq_gold:
+    staging:
+      +materialized: view          # thin cleaning layer on top of Silver, no data copied
+    gold:
+      +materialized: table         # clean rebuild from Silver each run: simple and idempotent
+      # external Delta tables at a known path so Fabric can read them (OneLake shortcut, M6).
+      # target.schema = gold in prod, ci in CI -> CI can never overwrite production Gold files.
+      +location_root: "abfss://lakehouse@atliqlakemeet.dfs.core.windows.net/{{ target.schema }}"

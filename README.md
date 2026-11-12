@@ -22,7 +22,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 - [x] M1 — OLTP database in Azure SQL
 - [x] M2 — Ingest into Bronze with ADF
 - [x] M3 — Clean and load Silver (PySpark + Delta)
-- [ ] M4 — Gold star schema with dbt
+- [x] M4 — Gold star schema with dbt
 - [ ] M5 — Nightly sync, idempotency proof
 - [ ] M6 — Fabric dashboard
 - [ ] M7 — CI/CD and reliability
@@ -88,3 +88,18 @@ Notebooks and run order: [`databricks/README.md`](databricks/README.md).
 - Clickstream: 426 malformed lines quarantined, re-sent events and whole bot sessions removed.
 - Every rule logs its row count to `atliq.silver.dq_log`; **17 of 17 checkpoint totals match** the guide.
   Full report: [`docs/data_quality_report.md`](docs/data_quality_report.md).
+
+## M4 — Gold star schema (dbt Core on Databricks)
+
+dbt project: [`atliq_gold/`](atliq_gold/README.md) (dbt-core 1.12 + dbt-databricks 1.13, Python 3.12 in `.venv-dbt`).
+Connection from environment variables only; `profiles.yml` has `dev` (schema `gold`) and `ci` (schema `ci`) targets.
+
+- **Staging (views):** QA test accounts removed, double-submitted lines de-duplicated, first payment per order,
+  current supplier cost (latest effective_date).
+- **Gold (external Delta tables at `lakehouse/gold/`, readable by Fabric):** `fact_sales` (one row per order item),
+  `dim_customer` (+ first_order_date), `dim_product` (+ supplier cost, unit margin), `dim_date` (rolls forward
+  automatically), `fact_web_sessions` (one row per session, funnel flags).
+- `dbt build`: **13 models + 36 tests, PASS=49** (unique, not_null, accepted_values, relationships, and the
+  stretch-goal test `assert_payments_match_orders`).
+- Gold totals for the seed period match the checkpoints: 22,959 sales rows, gross revenue 32,424,661.00,
+  returned 4,574,944.00, 1,000 customers, 60 products (supplier cost 56,871.53), funnel 23,193 → 13,309 → 7,391 → 4,442 → 3,446.

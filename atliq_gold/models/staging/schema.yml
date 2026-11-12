@@ -1,0 +1,43 @@
+version: 2
+
+models:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: ['Placed', 'Shipped', 'Delivered', 'Cancelled', 'Returned']}
+  - name: stg_order_items
+    columns:
+      - name: order_item_id
+        data_tests: [unique, not_null]
+  - name: stg_payments
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]      # one payment per order after de-duplication
+      - name: method
+        data_tests:
+          - accepted_values:
+              arguments: {values: ['UPI', 'Credit Card', 'Debit Card', 'Net Banking', 'Wallet', 'COD']}
+  - name: stg_supplier_price_list
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]      # one current cost per product
+  - name: stg_marketing_spend
+    columns:
+      - name: channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments: {values: ['Meta Ads', 'Google Ads', 'Email', 'SEO', 'Influencer']}
+  - name: stg_web_events
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: event_type
+        data_tests:
+          - accepted_values:
+              arguments: {values: ['page_view', 'product_view', 'add_to_cart', 'checkout', 'purchase']}

@@ -10,5 +10,6 @@ logs/
 # Python and editors
 __pycache__/
 .venv/
+.venv-dbt/
 .vscode/
 .DS_Store
