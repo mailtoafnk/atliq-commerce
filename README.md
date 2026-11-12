@@ -23,7 +23,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 - [x] M2 — Ingest into Bronze with ADF
 - [x] M3 — Clean and load Silver (PySpark + Delta)
 - [x] M4 — Gold star schema with dbt
-- [ ] M5 — Nightly sync, idempotency proof
+- [x] M5 — Nightly sync, idempotency proof
 - [ ] M6 — Fabric dashboard
 - [ ] M7 — CI/CD and reliability
 
@@ -103,3 +103,27 @@ Connection from environment variables only; `profiles.yml` has `dev` (schema `go
   stretch-goal test `assert_payments_match_orders`).
 - Gold totals for the seed period match the checkpoints: 22,959 sales rows, gross revenue 32,424,661.00,
   returned 4,574,944.00, 1,000 customers, 60 products (supplier cost 56,871.53), funnel 23,193 → 13,309 → 7,391 → 4,442 → 3,446.
+
+## M5 — Nightly sync and idempotency
+
+One schedule runs everything: ADF trigger `tr_nightly_0100` (01:00 daily, UTC+4) → `pl_nightly`
+→ `pl_nightly_ingest` → Databricks job `atliq_nightly` (Silver notebooks → `dbt build`). Details: [`adf/README.md`](adf/README.md).
+
+```
+tr_nightly_0100 ─► pl_nightly ─► pl_nightly_ingest (SQL → Bronze)
+                               └► Databricks job atliq_nightly
+                                    02_silver_full → 03_silver_incremental → 04_silver_clickstream → dbt build (Gold)
+```
+
+- **Code from Git:** the Databricks job runs notebooks and the dbt project from a Git folder linked to this repo.
+- **One run date:** `pl_nightly` sets `run_start_at` once and passes it to ingest (watermark + Bronze folder) and to the
+  job (`run_date`), so every layer processes the same night's batch.
+- **Change test:** the simulator added 20 orders and moved 5 existing orders to `Returned`
+  (`--update-existing`). After one `pl_nightly` run, Silver had 10,040 orders (10,020 + 20) and the 5 orders were
+  **updated in place** (still 5 rows, new `updated_at`), not duplicated.
+- **Idempotency proof:** the full pipeline was run a second time with no new source data. Gold `fact_sales` was
+  identical: **23,051 rows, gross revenue 39,728,680.00** both times.
+  Screenshots: [`docs/idempotency_before.png`](docs/idempotency_before.png), [`docs/idempotency_after.png`](docs/idempotency_after.png).
+- **Failure alert:** Azure Monitor alert on failed pipeline runs → email.
+- Note: the M3/M4 checkpoint totals were captured on the seed data; simulator runs (new orders, status changes)
+  change the Gold totals afterwards, as expected.

@@ -78,81 +78,6 @@
             "dependsOn": []
         },
         {
-            "name": "[concat(parameters('factoryName'), '/ds_sql_table')]",
-            "type": "Microsoft.DataFactory/factories/datasets",
-            "apiVersion": "2018-06-01",
-            "properties": {
-                "linkedServiceName": {
-                    "referenceName": "ls_azure_sql",
-                    "type": "LinkedServiceReference"
-                },
-                "parameters": {
-                    "schema": {
-                        "type": "string"
-                    },
-                    "table_name": {
-                        "type": "string"
-                    }
-                },
-                "annotations": [],
-                "type": "AzureSqlTable",
-                "schema": [],
-                "typeProperties": {
-                    "schema": {
-                        "value": "@dataset().schema",
-                        "type": "Expression"
-                    },
-                    "table": {
-                        "value": "@dataset().table_name",
-                        "type": "Expression"
-                    }
-                }
-            },
-            "dependsOn": [
-                "[concat(variables('factoryId'), '/linkedServices/ls_azure_sql')]"
-            ]
-        },
-        {
-            "name": "[concat(parameters('factoryName'), '/ds_bronze_parquet')]",
-            "type": "Microsoft.DataFactory/factories/datasets",
-            "apiVersion": "2018-06-01",
-            "properties": {
-                "linkedServiceName": {
-                    "referenceName": "ls_adls",
-                    "type": "LinkedServiceReference"
-                },
-                "parameters": {
-                    "folder_path": {
-                        "type": "string"
-                    },
-                    "file_name": {
-                        "type": "string"
-                    }
-                },
-                "annotations": [],
-                "type": "Parquet",
-                "typeProperties": {
-                    "location": {
-                        "type": "AzureBlobFSLocation",
-                        "fileName": {
-                            "value": "@dataset().file_name",
-                            "type": "Expression"
-                        },
-                        "folderPath": {
-                            "value": "@dataset().folder_path",
-                            "type": "Expression"
-                        },
-                        "fileSystem": "lakehouse"
-                    },
-                    "compressionCodec": "snappy"
-                },
-                "schema": []
-            },
-            "dependsOn": [
-                "[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
-            ]
-        },
-        {
             "name": "[concat(parameters('factoryName'), '/pl_nightly_ingest')]",
             "type": "Microsoft.DataFactory/factories/pipelines",
             "apiVersion": "2018-06-01",
@@ -170,7 +95,7 @@
                         "typeProperties": {
                             "variableName": "run_start_at",
                             "value": {
-                                "value": "@formatDateTime(utcnow(), 'yyyy-MM-dd HH:mm:ss')",
+                                "value": "@if(empty(pipeline().parameters.run_start_at), formatDateTime(utcnow(), 'yyyy-MM-dd HH:mm:ss'), pipeline().parameters.run_start_at)",
                                 "type": "Expression"
                             }
                         }
@@ -459,6 +384,7 @@
                             ],
                             "storeSettings": {
                                 "type": "AzureBlobFSReadSettings",
+                                "recursive": true,
                                 "enablePartitionDiscovery": false
                             },
                             "formatSettings": {
@@ -635,17 +561,98 @@
                 "policy": {
                     "elapsedTimeMetric": {}
                 },
+                "parameters": {
+                    "run_start_at": {
+                        "type": "string"
+                    }
+                },
                 "variables": {
                     "run_start_at": {
                         "type": "String"
                     }
                 },
-                "annotations": []
+                "annotations": [],
+                "lastPublishTime": "2026-10-23T17:08:53Z"
             },
             "dependsOn": [
                 "[concat(variables('factoryId'), '/datasets/ds_sql_table')]",
                 "[concat(variables('factoryId'), '/datasets/ds_lake_binary')]",
                 "[concat(variables('factoryId'), '/datasets/ds_bronze_parquet')]",
+                "[concat(variables('factoryId'), '/linkedServices/ls_azure_sql')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_bronze_parquet')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_adls",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "folder_path": {
+                        "type": "string"
+                    },
+                    "file_name": {
+                        "type": "string"
+                    }
+                },
+                "annotations": [],
+                "type": "Parquet",
+                "typeProperties": {
+                    "location": {
+                        "type": "AzureBlobFSLocation",
+                        "fileName": {
+                            "value": "@dataset().file_name",
+                            "type": "Expression"
+                        },
+                        "folderPath": {
+                            "value": "@dataset().folder_path",
+                            "type": "Expression"
+                        },
+                        "fileSystem": "lakehouse"
+                    },
+                    "compressionCodec": "snappy"
+                },
+                "schema": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ds_sql_table')]",
+            "type": "Microsoft.DataFactory/factories/datasets",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "linkedServiceName": {
+                    "referenceName": "ls_azure_sql",
+                    "type": "LinkedServiceReference"
+                },
+                "parameters": {
+                    "schema": {
+                        "type": "string"
+                    },
+                    "table_name": {
+                        "type": "string"
+                    }
+                },
+                "annotations": [],
+                "type": "AzureSqlTable",
+                "schema": [],
+                "typeProperties": {
+                    "schema": {
+                        "value": "@dataset().schema",
+                        "type": "Expression"
+                    },
+                    "table": {
+                        "value": "@dataset().table_name",
+                        "type": "Expression"
+                    }
+                }
+            },
+            "dependsOn": [
                 "[concat(variables('factoryId'), '/linkedServices/ls_azure_sql')]"
             ]
         },
@@ -668,13 +675,175 @@
                 "typeProperties": {
                     "location": {
                         "type": "AzureBlobFSLocation",
-                        "folderPath": "@dataset().folder_path",
+                        "folderPath": {
+                            "value": "@dataset().folder_path",
+                            "type": "Expression"
+                        },
                         "fileSystem": "lakehouse"
                     }
                 }
             },
             "dependsOn": [
                 "[concat(variables('factoryId'), '/linkedServices/ls_adls')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/ls_databricks')]",
+            "type": "Microsoft.DataFactory/factories/linkedServices",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "type": "AzureDatabricks",
+                "typeProperties": {
+                    "domain": "https://adb-7405612961370454.14.azuredatabricks.net",
+                    "authentication": "MSI",
+                    "workspaceResourceId": "/subscriptions/b552af2f-a022-4c50-bdf0-f6582f437d76/resourceGroups/rg-atliq-commerce/providers/Microsoft.Databricks/workspaces/atliq-dbx-meet",
+                    "newClusterNodeType": "Standard_D4s_v5",
+                    "newClusterNumOfWorker": "1",
+                    "newClusterVersion": "16.4.x-scala2.12",
+                    "clusterOption": "Fixed",
+                    "newClusterInitScripts": []
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/pl_nightly')]",
+            "type": "Microsoft.DataFactory/factories/pipelines",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "activities": [
+                    {
+                        "name": "run_start_at",
+                        "type": "SetVariable",
+                        "dependsOn": [],
+                        "policy": {
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "variableName": "run_start_at",
+                            "value": {
+                                "value": "@formatDateTime(utcnow(), 'yyyy-MM-dd HH:mm:ss')",
+                                "type": "Expression"
+                            }
+                        }
+                    },
+                    {
+                        "name": "Run ingest",
+                        "type": "ExecutePipeline",
+                        "dependsOn": [
+                            {
+                                "activity": "run_start_at",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "pipeline": {
+                                "referenceName": "pl_nightly_ingest",
+                                "type": "PipelineReference"
+                            },
+                            "waitOnCompletion": true,
+                            "parameters": {
+                                "run_start_at": {
+                                    "value": "@variables('run_start_at')",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "Run atliq_nightly",
+                        "type": "DatabricksJob",
+                        "dependsOn": [
+                            {
+                                "activity": "Run ingest",
+                                "dependencyConditions": [
+                                    "Succeeded"
+                                ]
+                            }
+                        ],
+                        "policy": {
+                            "timeout": "0.12:00:00",
+                            "retry": 0,
+                            "retryIntervalInSeconds": 30,
+                            "secureOutput": false,
+                            "secureInput": false
+                        },
+                        "userProperties": [],
+                        "typeProperties": {
+                            "jobId": "953702782755300",
+                            "jobParameters": {
+                                "run_date": {
+                                    "value": "@substring(variables('run_start_at'), 0, 10)",
+                                    "type": "Expression"
+                                }
+                            }
+                        },
+                        "linkedServiceName": {
+                            "referenceName": "ls_databricks",
+                            "type": "LinkedServiceReference"
+                        }
+                    }
+                ],
+                "policy": {
+                    "elapsedTimeMetric": {}
+                },
+                "variables": {
+                    "run_start_at": {
+                        "type": "String"
+                    }
+                },
+                "annotations": []
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/pipelines/pl_nightly_ingest')]",
+                "[concat(variables('factoryId'), '/linkedServices/ls_databricks')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('factoryName'), '/tr_nightly_0100')]",
+            "type": "Microsoft.DataFactory/factories/triggers",
+            "apiVersion": "2018-06-01",
+            "properties": {
+                "annotations": [],
+                "runtimeState": "Started",
+                "pipelines": [
+                    {
+                        "pipelineReference": {
+                            "referenceName": "pl_nightly",
+                            "type": "PipelineReference"
+                        },
+                        "parameters": {}
+                    }
+                ],
+                "type": "ScheduleTrigger",
+                "typeProperties": {
+                    "recurrence": {
+                        "frequency": "Day",
+                        "interval": 1,
+                        "startTime": "2026-11-13T01:00:00",
+                        "timeZone": "Arabian Standard Time",
+                        "schedule": {
+                            "minutes": [
+                                0
+                            ],
+                            "hours": [
+                                1
+                            ]
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat(variables('factoryId'), '/pipelines/pl_nightly')]"
             ]
         }
     ]
