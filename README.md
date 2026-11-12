@@ -21,7 +21,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 
 - [x] M1 — OLTP database in Azure SQL
 - [x] M2 — Ingest into Bronze with ADF
-- [ ] M3 — Clean and load Silver (PySpark + Delta)
+- [x] M3 — Clean and load Silver (PySpark + Delta)
 - [ ] M4 — Gold star schema with dbt
 - [ ] M5 — Nightly sync, idempotency proof
 - [ ] M6 — Fabric dashboard
@@ -75,3 +75,16 @@ Verified on the first run: 22/22 activities succeeded; orders 10,020 rows read =
 watermarks moved to the run start (same value for all three tables); a second run with no
 source changes copied 0 rows (incremental works); a same-day rerun replaced the batch file
 instead of duplicating it (fixed file names).
+
+## M3 — Clean and load Silver (Databricks, PySpark + Delta, Unity Catalog)
+
+Workspace `atliq-dbx-meet` (Premium, UAE North), serverless compute, catalog `atliq` with schemas `silver` / `gold`.
+The lake is reached through Unity Catalog (access connector → storage credential → external location), not mounts or keys.
+Notebooks and run order: [`databricks/README.md`](databricks/README.md).
+
+- One shared rulebook (`cleaning_rules`): normalise text, then map it; anything unmapped becomes NULL and is counted.
+- Full tables are cleaned and overwritten; orders, order items and payments are MERGEd on their business keys
+  (update only when newer), reading one night's Bronze batch via `run_date` (or `ALL` to rebuild).
+- Clickstream: 426 malformed lines quarantined, re-sent events and whole bot sessions removed.
+- Every rule logs its row count to `atliq.silver.dq_log`; **17 of 17 checkpoint totals match** the guide.
+  Full report: [`docs/data_quality_report.md`](docs/data_quality_report.md).
