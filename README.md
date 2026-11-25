@@ -3,6 +3,7 @@
 ![dbt CI](https://github.com/mailtoafnk/atliq-commerce/actions/workflows/dbt_ci.yml/badge.svg)
 
 **One-page architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+**Rebuild from scratch (steps, settings, fixes):** [`docs/REBUILD_GUIDE.md`](docs/REBUILD_GUIDE.md)
 
 ### At a glance
 
