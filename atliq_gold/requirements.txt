@@ -1,0 +1,3 @@
+# dbt for the Gold layer: same versions locally (.venv-dbt) and in GitHub Actions
+dbt-core~=1.12.0
+dbt-databricks~=1.13.0

@@ -1,0 +1,65 @@
+# CI for the dbt Gold layer (M7).
+# On every change to atliq_gold/, build all models and run all tests against a throwaway
+# schema (atliq.ci, files under lakehouse/ci/) so production Gold is never touched.
+name: dbt CI
+
+on:
+  pull_request:
+    paths:
+      - "atliq_gold/**"
+      - ".github/workflows/dbt_ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "atliq_gold/**"
+      - ".github/workflows/dbt_ci.yml"
+  workflow_dispatch: {}        # "Run workflow" button for a manual run
+
+concurrency:
+  group: dbt-ci-${{ github.ref }}
+  cancel-in-progress: true     # a newer push cancels the older run (saves warehouse time)
+
+permissions:
+  contents: read
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: atliq_gold
+    env:
+      # secrets live in GitHub (Settings -> Secrets and variables -> Actions), never in the repo
+      DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+      DATABRICKS_HTTP_PATH: ${{ secrets.DATABRICKS_HTTP_PATH }}
+      DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      DBT_PROFILES_DIR: .        # profiles.yml in atliq_gold/ reads the three env vars above
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dbt
+        run: pip install -r requirements.txt
+
+      - name: Check the connection
+        run: dbt debug --target ci
+
+      - name: Build models and run tests (target ci)
+        run: dbt build --target ci
+
+      - name: Keep the run results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-run-results
+          path: |
+            atliq_gold/target/run_results.json
+            atliq_gold/logs/dbt.log
+          if-no-files-found: ignore
