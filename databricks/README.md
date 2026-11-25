@@ -1,4 +1,4 @@
-# Databricks — Silver layer (Milestone 3)
+# Databricks — Silver layer (phase M3)
 
 Notebooks are stored as Databricks source files (`.py`, cells split by `# COMMAND ----------`).
 Import them into one workspace folder (Workspace → folder → Import → File); `%run ./cleaning_rules` needs them side by side.

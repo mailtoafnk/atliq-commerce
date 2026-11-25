@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 05_checkpoints: compare Silver with the guide's section 7.7 totals
+# MAGIC # 05_checkpoints: compare Silver with the reference checkpoint totals
 # MAGIC Silver keeps test accounts (flagged), double-submitted lines and retried payments. This notebook applies the
 # MAGIC **same rules dbt staging will apply in M4** (exclude test accounts, keep one line per duplicate group, first
 # MAGIC payment per order) so we can check the cleaning before building Gold. Seed period: up to 2026-08-31.

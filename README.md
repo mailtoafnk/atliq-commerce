@@ -1,4 +1,4 @@
-# AtliQ Commerce — End-to-End Data Engineering Capstone
+# AtliQ Commerce — End-to-End Azure Data Engineering Project
 
 ![dbt CI](https://github.com/mailtoafnk/atliq-commerce/actions/workflows/dbt_ci.yml/badge.svg)
 
@@ -20,7 +20,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 
 ## Repository layout
 
-| Folder | Milestone | Contents |
+| Folder | Phase | Contents |
 |---|---|---|
 | `sql/` | M1 | OLTP schema, seed data, ETL control table |
 | `simulator/` | M1 | Daily order simulator (`.env.example` → `.env`) |
@@ -31,7 +31,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 | `docs/` | all | Architecture, data quality report, idempotency proof |
 | `data/` | — | Raw source files to upload to ADLS (git-ignored) |
 
-## Progress
+## Build phases
 
 - [x] M1 — OLTP database in Azure SQL
 - [x] M2 — Ingest into Bronze with ADF
@@ -100,7 +100,7 @@ Notebooks and run order: [`databricks/README.md`](databricks/README.md).
 - Full tables are cleaned and overwritten; orders, order items and payments are MERGEd on their business keys
   (update only when newer), reading one night's Bronze batch via `run_date` (or `ALL` to rebuild).
 - Clickstream: 426 malformed lines quarantined, re-sent events and whole bot sessions removed.
-- Every rule logs its row count to `atliq.silver.dq_log`; **17 of 17 checkpoint totals match** the guide.
+- Every rule logs its row count to `atliq.silver.dq_log`; **17 of 17 reference checkpoint totals match**.
   Full report: [`docs/data_quality_report.md`](docs/data_quality_report.md).
 
 ## M4 — Gold star schema (dbt Core on Databricks)

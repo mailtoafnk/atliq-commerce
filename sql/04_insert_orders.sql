@@ -1,7 +1,7 @@
 -- ============================================================
 --  AtliQ Commerce OLTP  |  Seed data: orders
 --  Rows: 10000
---  Real-world source data: expect inconsistencies (see the guide's Known Issues).
+--  Real-world source data: expect inconsistencies (see docs/data_quality_report.md).
 -- ============================================================
 SET NOCOUNT ON;
 

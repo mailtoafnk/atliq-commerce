@@ -1,4 +1,4 @@
-# atliq_gold — dbt project (Milestone 4)
+# atliq_gold — dbt project (phase M4)
 
 Builds the Gold star schema in `atliq.gold` from the cleaned Silver tables in `atliq.silver`.
 

@@ -1,7 +1,7 @@
-# Data Quality Report — Silver (Milestone 3)
+# Data Quality Report — Silver (phase M3)
 
 Seed run of 2026-11-12. Source: `atliq.silver.dq_log` (latest count per rule) and `databricks/05_checkpoints`.
-Every rule from the guide's section 4.3 is implemented in `databricks/cleaning_rules` and the Silver notebooks,
+Every cleaning rule is implemented in `databricks/cleaning_rules` and the Silver notebooks,
 and logs how many rows it touched. Rows marked **must be 0** prove that no value slipped past a lookup map.
 
 ## 1. What was wrong in Bronze (profiling, `01_profile_bronze`)
@@ -64,7 +64,7 @@ Azure SQL's default collation hid most of this (it showed 10 statuses, 23 cities
 
 Orders, order items and payments include the 20 orders added by the daily simulator before this run.
 
-## 3. Checkpoint totals (guide section 7.7) — 17 of 17 match
+## 3. Reference checkpoint totals — 17 of 17 match
 
 Applied with the same rules dbt staging uses in M4 (exclude test accounts, one row per duplicate line,
 first payment per order), seed period up to 2026-08-31.
@@ -89,7 +89,7 @@ first payment per order), seed period up to 2026-08-31.
 | Clean events / sessions | 93,436 / 23,193 | same | ✅ |
 | Funnel: product view / cart / checkout / purchase | 13,309 / 7,391 / 4,442 / 3,446 | same | ✅ |
 
-Net revenue = 32,424,661.00 − 4,574,944.00 = **27,849,717.00** (matches the guide).
+Net revenue = 32,424,661.00 − 4,574,944.00 = **27,849,717.00** (matches the reference total).
 
 ## 4. Idempotency observed in Silver
 
