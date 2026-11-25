@@ -1,5 +1,19 @@
 # AtliQ Commerce — End-to-End Data Engineering Capstone
 
+![dbt CI](https://github.com/mailtoafnk/atliq-commerce/actions/workflows/dbt_ci.yml/badge.svg)
+
+**One-page architecture:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+
+### At a glance
+
+| | |
+|---|---|
+| **Pipeline** | Azure SQL → ADF → ADLS Bronze → Databricks Silver (PySpark, Delta MERGE) → dbt Gold (star schema) → Fabric / Power BI |
+| **Runs** | Nightly at 01:00 from one ADF trigger; failure alert by email |
+| **Proven** | 17/17 checkpoints · 36 dbt tests · idempotent re-runs (23,051 rows both runs) · CI green on every dbt change |
+| **Dashboard** | Gross 32.76M · Net 28.17M · 8,223 orders · 14.9% web conversion |
+
+
 Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → Databricks + dbt → Microsoft Fabric.
 
 ![Architecture](docs/architecture.svg)
@@ -25,7 +39,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 - [x] M4 — Gold star schema with dbt
 - [x] M5 — Nightly sync, idempotency proof
 - [x] M6 — Fabric dashboard
-- [ ] M7 — CI/CD and reliability
+- [x] M7 — CI/CD and reliability
 
 ## M1 — OLTP database (Azure SQL)
 
@@ -154,3 +168,30 @@ ADLS lakehouse/gold/* (Delta, written by dbt)
 
 ![Sales overview](fabric/dashboard_sales_overview.png)
 ![Website funnel](fabric/dashboard_website_funnel.png)
+
+## M7 — CI/CD and reliability
+
+- **GitHub Actions** ([`.github/workflows/dbt_ci.yml`](.github/workflows/dbt_ci.yml)): on every push or pull request
+  that touches `atliq_gold/`, install dbt (pinned in [`atliq_gold/requirements.txt`](atliq_gold/requirements.txt)),
+  run `dbt debug` and `dbt build --target ci`. All models are built and all 36 tests run in the throwaway schema
+  `atliq.ci` (files under `lakehouse/ci/`), so CI can never overwrite production Gold. Manual runs: Actions → dbt CI → Run workflow.
+- **Secrets:** `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` are GitHub Actions secrets (a separate
+  90-day token, `github-ci`), read by `profiles.yml` through `env_var()`. Nothing secret is committed.
+- **Reliability recap:** retries on SQL activities, watermark moves only on success, idempotent MERGE + dbt rebuild,
+  schedule trigger, email alert on failed runs, budget alerts. Architecture and design choices:
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+## How to run it
+
+1. **Database:** run `sql/01` → `07` in Azure SQL, one at a time (`sql/99_checks.sql` shows row counts).
+2. **Ingest:** publish ADF from [`adf/`](adf/README.md); upload `data/` CSVs and clickstream to `lakehouse/landing/`.
+3. **Transform:** link this repo as a Git folder in Databricks; create the job `atliq_nightly`
+   (02 → 03 → 04 → dbt build) — see [`databricks/README.md`](databricks/README.md) and [`atliq_gold/README.md`](atliq_gold/README.md).
+4. **Run nightly:** `pl_nightly` (ingest → job); schedule with `tr_nightly_0100`.
+5. **Dashboard:** Fabric Lakehouse with table shortcuts to `lakehouse/gold/*`, Direct Lake model, report — see [`fabric/README.md`](fabric/README.md).
+6. **New data:** `python simulator/daily_order_simulator.py --orders 20 --update-existing` then run `pl_nightly`.
+
+## Cost and teardown
+
+Serverless everywhere, budget alerts at $10 / $20, Fabric F2 paused when idle, nightly trigger stopped after the proof.
+To remove everything: delete the resource groups `rg-atliq-commerce` and `Capacityaf` in the Azure portal.
