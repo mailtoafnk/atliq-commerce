@@ -24,7 +24,7 @@ Nightly OLTP → OLAP sync: Azure SQL → ADF → ADLS (Bronze/Silver/Gold) → 
 - [x] M3 — Clean and load Silver (PySpark + Delta)
 - [x] M4 — Gold star schema with dbt
 - [x] M5 — Nightly sync, idempotency proof
-- [ ] M6 — Fabric dashboard
+- [x] M6 — Fabric dashboard
 - [ ] M7 — CI/CD and reliability
 
 ## M1 — OLTP database (Azure SQL)
@@ -127,3 +127,30 @@ tr_nightly_0100 ─► pl_nightly ─► pl_nightly_ingest (SQL → Bronze)
 - **Failure alert:** Azure Monitor alert on failed pipeline runs → email.
 - Note: the M3/M4 checkpoint totals were captured on the seed data; simulator runs (new orders, status changes)
   change the Gold totals afterwards, as expected.
+
+## M6 — Fabric dashboard (Lakehouse shortcut + Direct Lake + Power BI)
+
+Workspace `atliq-commerce` on Fabric capacity `capacityaf` (F2, UAE North — paused when not in use).
+Details: [`fabric/README.md`](fabric/README.md).
+
+```
+ADLS lakehouse/gold/* (Delta, written by dbt)
+   └─► OneLake table shortcuts in Lakehouse lh_atliq_gold   (no copy)
+         └─► Semantic model sm_atliq_sales (Direct Lake, star schema, 4 relationships)
+               └─► Report rpt_atliq_sales — 2 pages
+```
+
+- **Revenue definition (stated on the report):** Gross = all orders except Cancelled · Returned = Returned orders ·
+  Net = Gross − Returned. Raw `gross_revenue` column hidden; every visual uses the measures.
+- **Page 1 — Sales overview:** KPI cards (Gross 32.76M · Returned 4.59M · Net 28.17M · Orders 8,223), monthly revenue
+  trend, top 10 products, net revenue by city, new vs returning customers per month; slicers for year, city, category.
+- **Page 2 — Website funnel:** 23,193 sessions → 13,309 product views → 7,391 add to cart → 4,442 checkouts →
+  3,446 purchases (14.9% conversion; biggest drop view → cart). Matches the M3 checkpoint.
+- **Reconciliation:** Fabric SQL endpoint = Databricks (`fact_sales` 23,051 rows); report totals = SQL totals.
+- **Checks done:** "(Blank)" slicer entries investigated — 0 NULLs and 0 orphan keys in Gold, no revenue in a blank
+  bucket → hidden as a cosmetic placeholder. Denim Jeans (≈¼ of net revenue) verified: sold at catalogue price
+  (1,599) on every row, simply the highest volume (5,419 units) — a real concentration, not a data error.
+- **Note:** the drop after Sep 2026 is the end of the seed data (Oct–Nov hold simulated orders only); labelled on the chart.
+
+![Sales overview](fabric/dashboard_sales_overview.png)
+![Website funnel](fabric/dashboard_website_funnel.png)
